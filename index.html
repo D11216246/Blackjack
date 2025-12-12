@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>十點半 (10.5)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .game-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .player-section, .dealer-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .cards {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            min-height: 80px;
+            align-items: center;
+        }
+
+        .card {
+            background: white;
+            color: #333;
+            padding: 15px 12px;
+            border-radius: 8px;
+            font-size: 1.3em;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .card.hidden {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .red-suit {
+            color: #d32f2f;
+        }
+
+        .score {
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 25px 0;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 8px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .result {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 20px 0;
+            min-height: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .log-area {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .log-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .log-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-area::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .log-area::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.8);
+            border-radius: 10px;
+        }
+
+        .betting-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .balance-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .bet-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .bet-input {
+            padding: 10px 15px;
+            font-size: 1.1em;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            width: 150px;
+            text-align: center;
+        }
+
+        .bet-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .bet-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        .bet-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .current-bet {
+            font-size: 1.2em;
+            margin-top: 10px;
+            color: #ffeb3b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎴 十點半 (10.5) 🎴</h1>
+        
+        <div class="betting-area">
+            <div class="balance-display">💰 餘額：<span id="balance">1000</span></div>
+            <div class="bet-controls">
+                <label for="bet-amount" style="font-size: 1.1em;">下注金額：</label>
+                <input type="number" id="bet-amount" class="bet-input" min="10" max="1000" value="50" step="10">
+                <button class="bet-button" onclick="quickBet(10)">+10</button>
+                <button class="bet-button" onclick="quickBet(50)">+50</button>
+                <button class="bet-button" onclick="quickBet(100)">+100</button>
+                <button class="bet-button" onclick="setBetMax()">最大</button>
+            </div>
+            <div class="current-bet" id="current-bet">目前下注：<span id="bet-display">0</span></div>
+        </div>
+        
+        <div class="game-area">
+            <div class="dealer-section">
+                <div class="section-title">🎩 莊家 (Dealer)</div>
+                <div class="cards" id="dealer-cards"></div>
+                <div class="score" id="dealer-score"></div>
+            </div>
+
+            <div class="player-section">
+                <div class="section-title">👤 玩家 (Player)</div>
+                <div class="cards" id="player-cards"></div>
+                <div class="score" id="player-score"></div>
+            </div>
+        </div>
+
+        <div class="result" id="result">按下「開始遊戲」開始新局</div>
+
+        <div class="controls">
+            <button id="new-game-btn" onclick="newGame()">開始遊戲 (Start)</button>
+            <button id="hit-btn" onclick="hit()" disabled>要牌 (Hit)</button>
+            <button id="stand-btn" onclick="stand()" disabled>停牌 (Stand)</button>
+        </div>
+
+        <div class="log-area">
+            <div class="log-title">📋 遊戲記錄</div>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // 遊戲狀態
+        let deck = [];
+        let playerHand = [];
+        let dealerHand = [];
+        let gameState = 'idle'; // idle, playerTurn, dealerTurn, settled
+        let balance = 1000; // 玩家餘額
+        let currentBet = 0; // 當前下注金額
+
+        // 花色與牌面
+        const suits = ['♠', '♥', '♦', '♣'];
+        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+        // 創建一副牌
+        function createDeck() {
+            const newDeck = [];
+            for (const suit of suits) {
+                for (const rank of ranks) {
+                    newDeck.push({ suit, rank });
+                }
+            }
+            return newDeck;
+        }
+
+        // Fisher-Yates 洗牌演算法
+        function shuffleDeck(deck) {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            return deck;
+        }
+
+        // 計算手牌點數（使用半點單位，避免浮點誤差）
+        // 內部以 2 倍計算：10.5 點 = 21，0.5 點 = 1
+        function calculateScore(hand) {
+            let scoreHalf = 0; // 以半點為單位
+
+            for (const card of hand) {
+                if (card.rank === 'A') {
+                    scoreHalf += 2; // A = 1 點 = 2 個半點
+                } else if (['J', 'Q', 'K'].includes(card.rank)) {
+                    scoreHalf += 1; // J/Q/K = 0.5 點 = 1 個半點
+                } else {
+                    scoreHalf += parseInt(card.rank) * 2; // 數字牌 = 面值 * 2
+                }
+            }
+
+            return scoreHalf;
+        }
+        
+        // 將半點單位轉換為顯示點數
+        function displayScore(scoreHalf) {
+            return scoreHalf / 2;
+        }
+
+        // 顯示卡牌
+        function displayCard(card, isHidden = false) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card';
+            
+            if (isHidden) {
+                cardDiv.className += ' hidden';
+                cardDiv.textContent = '?';
+            } else {
+                const isRed = card.suit === '♥' || card.suit === '♦';
+                if (isRed) {
+                    cardDiv.classList.add('red-suit');
+                }
+                cardDiv.textContent = card.rank + card.suit;
+            }
+            
+            return cardDiv;
+        }
+
+        // 更新 UI
+        function updateUI(revealDealer = false) {
+            const dealerCardsDiv = document.getElementById('dealer-cards');
+            const playerCardsDiv = document.getElementById('player-cards');
+            const dealerScoreDiv = document.getElementById('dealer-score');
+            const playerScoreDiv = document.getElementById('player-score');
+
+            // 清空顯示
+            dealerCardsDiv.innerHTML = '';
+            playerCardsDiv.innerHTML = '';
+
+            // 顯示莊家牌
+            dealerHand.forEach((card, index) => {
+                const isHidden = !revealDealer && index === 1;
+                dealerCardsDiv.appendChild(displayCard(card, isHidden));
+            });
+
+            // 顯示玩家牌
+            playerHand.forEach(card => {
+                playerCardsDiv.appendChild(displayCard(card));
+            });
+
+            // 顯示點數
+            const playerScoreHalf = calculateScore(playerHand);
+            playerScoreDiv.textContent = `點數：${displayScore(playerScoreHalf)}`;
+
+            if (revealDealer) {
+                const dealerScoreHalf = calculateScore(dealerHand);
+                dealerScoreDiv.textContent = `點數：${displayScore(dealerScoreHalf)}`;
+            } else if (dealerHand.length > 0) {
+                // 只顯示第一張明牌的點數
+                const firstCard = dealerHand[0];
+                let visibleScoreHalf = 0;
+                if (firstCard.rank === 'A') {
+                    visibleScoreHalf = 2; // 1 點
+                } else if (['J', 'Q', 'K'].includes(firstCard.rank)) {
+                    visibleScoreHalf = 1; // 0.5 點
+                } else {
+                    visibleScoreHalf = parseInt(firstCard.rank) * 2;
+                }
+                dealerScoreDiv.textContent = `顯示點數：${displayScore(visibleScoreHalf)}`;
+            } else {
+                dealerScoreDiv.textContent = '';
+            }
+        }
+
+        // 添加日誌
+        function addLog(message) {
+            const logDiv = document.getElementById('log');
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            logItem.textContent = message;
+            logDiv.insertBefore(logItem, logDiv.firstChild);
+        }
+
+        // 清空日誌
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // 更新結果顯示
+        function updateResult(message) {
+            document.getElementById('result').textContent = message;
+        }
+
+        // 更新按鈕狀態
+        function updateButtons(hitEnabled, standEnabled) {
+            document.getElementById('hit-btn').disabled = !hitEnabled;
+            document.getElementById('stand-btn').disabled = !standEnabled;
+        }
+
+        // 更新餘額顯示
+        function updateBalance() {
+            document.getElementById('balance').textContent = balance;
+        }
+
+        // 更新下注顯示
+        function updateBetDisplay() {
+            document.getElementById('bet-display').textContent = currentBet;
+        }
+
+        // 快速下注
+        function quickBet(amount) {
+            const betInput = document.getElementById('bet-amount');
+            let newBet = parseInt(betInput.value) + amount;
+            if (newBet > balance) {
+                newBet = balance;
+            }
+            betInput.value = newBet;
+        }
+
+        // 最大下注
+        function setBetMax() {
+            document.getElementById('bet-amount').value = balance;
+        }
+
+        // 下注驗證
+        function validateBet() {
+            const betAmount = parseInt(document.getElementById('bet-amount').value);
+            
+            if (isNaN(betAmount) || betAmount <= 0) {
+                updateResult('❌ 請輸入有效的下注金額');
+                return false;
+            }
+            
+            if (betAmount > balance) {
+                updateResult('❌ 餘額不足！');
+                return false;
+            }
+            
+            if (betAmount < 10) {
+                updateResult('❌ 最小下注金額為 10');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // 結算賭注
+        function settleBet(result) {
+            if (result === 'win') {
+                balance += currentBet;
+                addLog(`💰 贏得 ${currentBet}！餘額：${balance}`);
+            } else if (result === 'lose') {
+                // 已經扣除，不需要再操作
+                addLog(`💸 損失 ${currentBet}。餘額：${balance}`);
+            } else if (result === 'push') {
+                balance += currentBet;
+                addLog(`🤝 退回賭注 ${currentBet}。餘額：${balance}`);
+            }
+            
+            updateBalance();
+            currentBet = 0;
+            updateBetDisplay();
+            
+            // 檢查是否破產
+            if (balance <= 0) {
+                updateResult('💔 破產了！遊戲結束');
+                addLog('🔄 重置餘額為 1000');
+                balance = 1000;
+                updateBalance();
+            }
+        }
+
+        // 新遊戲
+        function newGame() {
+            // 驗證下注
+            if (!validateBet()) {
+                return;
+            }
+            
+            // 扣除下注金額
+            const betAmount = parseInt(document.getElementById('bet-amount').value);
+            currentBet = betAmount;
+            balance -= currentBet;
+            updateBalance();
+            updateBetDisplay();
+            // 重置狀態
+            deck = shuffleDeck(createDeck());
+            playerHand = [];
+            dealerHand = [];
+            gameState = 'playerTurn';
+
+            clearLog();
+            addLog('🎮 新遊戲開始！');
+
+            // 發初始牌：玩家 1 張，莊家 1 張（十點半規則）
+            playerHand.push(deck.pop());
+            dealerHand.push(deck.pop());
+
+            const playerScoreHalf = calculateScore(playerHand);
+            const dealerScoreHalf = calculateScore(dealerHand);
+            
+            addLog(`玩家發到：${playerHand[0].rank}${playerHand[0].suit}（${displayScore(playerScoreHalf)} 點）`);
+            addLog(`莊家發到：${dealerHand[0].rank}${dealerHand[0].suit}（${displayScore(dealerScoreHalf)} 點）`);
+
+            updateUI(false);
+            updateResult('進行中...');
+            updateButtons(true, true);
+        }
+
+        // 玩家要牌
+        function hit() {
+            if (gameState !== 'playerTurn') return;
+            
+            // 檢查牌堆是否為空
+            if (deck.length === 0) {
+                addLog('⚠️ 牌堆已空，遊戲結束');
+                gameState = 'settled';
+                updateButtons(false, false);
+                return;
+            }
+
+            const card = deck.pop();
+            playerHand.push(card);
+            const scoreHalf = calculateScore(playerHand);
+            addLog(`玩家要牌：${card.rank}${card.suit}（目前 ${displayScore(scoreHalf)} 點）`);
+
+            updateUI(false);
+
+            if (scoreHalf > 21) { // 10.5 點 = 21 個半點
+                // 玩家爆牌
+                gameState = 'settled';
+                addLog(`💥 玩家爆牌！（點數：${displayScore(scoreHalf)}）`);
+                updateResult('玩家爆牌，莊家勝利');
+                updateUI(true);
+                updateButtons(false, false);
+                settleBet('lose');
+            } else if (scoreHalf === 21) {
+                addLog(`✨ 玩家達到 10.5 點！`);
+            }
+        }
+
+        // 玩家停牌
+        function stand() {
+            if (gameState !== 'playerTurn') return;
+
+            gameState = 'dealerTurn';
+            addLog('玩家選擇停牌');
+            updateButtons(false, false);
+
+            // 顯示所有牌（十點半沒有暗牌，但為了UI一致性保留）
+            updateUI(true);
+
+            // 莊家自動補牌
+            setTimeout(() => {
+                dealerPlay();
+            }, 500);
+        }
+
+        // 莊家補牌邏輯
+        function dealerPlay() {
+            let dealerScoreHalf = calculateScore(dealerHand);
+
+            // 莊家規則：< 8 點必須要牌，>= 8 點停牌（8 點 = 16 個半點）
+            while (dealerScoreHalf < 16) {
+                // 檢查牌堆是否為空
+                if (deck.length === 0) {
+                    addLog('⚠️ 牌堆已空，以當前點數結算');
+                    break;
+                }
+                
+                const card = deck.pop();
+                dealerHand.push(card);
+                dealerScoreHalf = calculateScore(dealerHand);
+                addLog(`莊家要牌：${card.rank}${card.suit}（目前 ${displayScore(dealerScoreHalf)} 點）`);
+                updateUI(true);
+            }
+
+            // 結算
+            gameState = 'settled';
+            settleGame();
+        }
+
+        // 結算遊戲
+        function settleGame() {
+            const playerScoreHalf = calculateScore(playerHand);
+            const dealerScoreHalf = calculateScore(dealerHand);
+
+            addLog(`最終點數 - 玩家：${displayScore(playerScoreHalf)}，莊家：${displayScore(dealerScoreHalf)}`);
+
+            if (dealerScoreHalf > 21) { // 10.5 點 = 21 個半點
+                addLog('💥 莊家爆牌！');
+                updateResult('莊家爆牌，玩家勝利！🎉');
+                settleBet('win');
+            } else if (playerScoreHalf > dealerScoreHalf) {
+                addLog('🎉 玩家點數較大！');
+                updateResult('玩家勝利！🎉');
+                settleBet('win');
+            } else if (playerScoreHalf < dealerScoreHalf) {
+                addLog('💼 莊家點數較大');
+                updateResult('莊家勝利');
+                settleBet('lose');
+            } else {
+                addLog('🤝 點數相同');
+                updateResult('和局（Push）');
+                settleBet('push');
+            }
+        }
+
+        // 初始化
+        updateButtons(false, false);
+    </script>
+</body>
+</html>
