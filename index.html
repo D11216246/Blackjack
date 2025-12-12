@@ -157,11 +157,89 @@
             background: rgba(102, 126, 234, 0.8);
             border-radius: 10px;
         }
+
+        .betting-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .balance-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .bet-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .bet-input {
+            padding: 10px 15px;
+            font-size: 1.1em;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            width: 150px;
+            text-align: center;
+        }
+
+        .bet-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .bet-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        .bet-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .current-bet {
+            font-size: 1.2em;
+            margin-top: 10px;
+            color: #ffeb3b;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🃏 21 點 Blackjack 🃏</h1>
+        
+        <div class="betting-area">
+            <div class="balance-display">💰 餘額：<span id="balance">1000</span></div>
+            <div class="bet-controls">
+                <label for="bet-amount" style="font-size: 1.1em;">下注金額：</label>
+                <input type="number" id="bet-amount" class="bet-input" min="10" max="1000" value="50" step="10">
+                <button class="bet-button" onclick="quickBet(10)">+10</button>
+                <button class="bet-button" onclick="quickBet(50)">+50</button>
+                <button class="bet-button" onclick="quickBet(100)">+100</button>
+                <button class="bet-button" onclick="setBetMax()">最大</button>
+            </div>
+            <div class="current-bet" id="current-bet">目前下注：<span id="bet-display">0</span></div>
+        </div>
         
         <div class="game-area">
             <div class="dealer-section">
@@ -197,6 +275,8 @@
         let playerHand = [];
         let dealerHand = [];
         let gameState = 'idle'; // idle, playerTurn, dealerTurn, settled
+        let balance = 1000; // 玩家餘額
+        let currentBet = 0; // 當前下注金額
 
         // 花色與牌面
         const suits = ['♠', '♥', '♦', '♣'];
@@ -343,8 +423,96 @@
             document.getElementById('stand-btn').disabled = !standEnabled;
         }
 
+        // 更新餘額顯示
+        function updateBalance() {
+            document.getElementById('balance').textContent = balance;
+        }
+
+        // 更新下注顯示
+        function updateBetDisplay() {
+            document.getElementById('bet-display').textContent = currentBet;
+        }
+
+        // 快速下注
+        function quickBet(amount) {
+            const betInput = document.getElementById('bet-amount');
+            let newBet = parseInt(betInput.value) + amount;
+            if (newBet > balance) {
+                newBet = balance;
+            }
+            betInput.value = newBet;
+        }
+
+        // 最大下注
+        function setBetMax() {
+            document.getElementById('bet-amount').value = balance;
+        }
+
+        // 下注驗證
+        function validateBet() {
+            const betAmount = parseInt(document.getElementById('bet-amount').value);
+            
+            if (isNaN(betAmount) || betAmount <= 0) {
+                updateResult('❌ 請輸入有效的下注金額');
+                return false;
+            }
+            
+            if (betAmount > balance) {
+                updateResult('❌ 餘額不足！');
+                return false;
+            }
+            
+            if (betAmount < 10) {
+                updateResult('❌ 最小下注金額為 10');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // 結算賭注
+        function settleBet(result) {
+            if (result === 'win') {
+                balance += currentBet;
+                addLog(`💰 贏得 ${currentBet}！餘額：${balance}`);
+            } else if (result === 'blackjack') {
+                const winnings = Math.floor(currentBet * 1.5);
+                balance += winnings;
+                addLog(`🎰 Blackjack！贏得 ${winnings}！餘額：${balance}`);
+            } else if (result === 'lose') {
+                // 已經扣除，不需要再操作
+                addLog(`💸 損失 ${currentBet}。餘額：${balance}`);
+            } else if (result === 'push') {
+                balance += currentBet;
+                addLog(`🤝 退回賭注 ${currentBet}。餘額：${balance}`);
+            }
+            
+            updateBalance();
+            currentBet = 0;
+            updateBetDisplay();
+            
+            // 檢查是否破產
+            if (balance <= 0) {
+                updateResult('💔 破產了！遊戲結束');
+                addLog('🔄 重置餘額為 1000');
+                balance = 1000;
+                updateBalance();
+            }
+        }
+
         // 新遊戲
         function newGame() {
+            // 驗證下注
+            if (!validateBet()) {
+                return;
+            }
+            
+            // 扣除下注金額
+            const betAmount = parseInt(document.getElementById('bet-amount').value);
+            currentBet = betAmount;
+            balance -= currentBet;
+            updateBalance();
+            updateBetDisplay();
             // 重置狀態
             deck = shuffleDeck(createDeck());
             playerHand = [];
@@ -377,12 +545,15 @@
                 if (playerBJ && dealerBJ) {
                     addLog('🤝 雙方都是 Blackjack！');
                     updateResult('Push（平手）');
+                    settleBet('push');
                 } else if (playerBJ) {
                     addLog('🎉 玩家 Blackjack！');
                     updateResult('玩家勝利！🎉');
+                    settleBet('blackjack');
                 } else {
                     addLog('💼 莊家 Blackjack！');
                     updateResult('莊家勝利');
+                    settleBet('lose');
                 }
                 
                 updateButtons(false, false);
@@ -417,6 +588,7 @@
                 updateResult('玩家爆牌，莊家勝利');
                 updateUI(true);
                 updateButtons(false, false);
+                settleBet('lose');
             } else if (score === 21) {
                 addLog(`✨ 玩家達到 21 點！`);
             }
@@ -474,15 +646,19 @@
             if (dealerScore > 21) {
                 addLog('💥 莊家爆牌！');
                 updateResult('莊家爆牌，玩家勝利！🎉');
+                settleBet('win');
             } else if (playerScore > dealerScore) {
                 addLog('🎉 玩家點數較大！');
                 updateResult('玩家勝利！🎉');
+                settleBet('win');
             } else if (playerScore < dealerScore) {
                 addLog('💼 莊家點數較大');
                 updateResult('莊家勝利');
+                settleBet('lose');
             } else {
                 addLog('🤝 點數相同');
                 updateResult('Push（平手）');
+                settleBet('push');
             }
         }
 
