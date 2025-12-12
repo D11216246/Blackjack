@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>21 點 Blackjack</title>
+    <title>十點半 (10.5)</title>
     <style>
         * {
             margin: 0;
@@ -226,7 +226,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🃏 21 點 Blackjack 🃏</h1>
+        <h1>🎴 十點半 (10.5) 🎴</h1>
         
         <div class="betting-area">
             <div class="balance-display">💰 餘額：<span id="balance">1000</span></div>
@@ -255,12 +255,12 @@
             </div>
         </div>
 
-        <div class="result" id="result">按下 New Game 開始遊戲</div>
+        <div class="result" id="result">按下「開始遊戲」開始新局</div>
 
         <div class="controls">
-            <button id="new-game-btn" onclick="newGame()">New Game</button>
-            <button id="hit-btn" onclick="hit()" disabled>Hit (要牌)</button>
-            <button id="stand-btn" onclick="stand()" disabled>Stand (停牌)</button>
+            <button id="new-game-btn" onclick="newGame()">開始遊戲 (Start)</button>
+            <button id="hit-btn" onclick="hit()" disabled>要牌 (Hit)</button>
+            <button id="stand-btn" onclick="stand()" disabled>停牌 (Stand)</button>
         </div>
 
         <div class="log-area">
@@ -302,35 +302,27 @@
             return deck;
         }
 
-        // 計算手牌點數
+        // 計算手牌點數（使用半點單位，避免浮點誤差）
+        // 內部以 2 倍計算：10.5 點 = 21，0.5 點 = 1
         function calculateScore(hand) {
-            let score = 0;
-            let aces = 0;
+            let scoreHalf = 0; // 以半點為單位
 
-            // 先計算所有牌的基本點數（A 當作 1）
             for (const card of hand) {
                 if (card.rank === 'A') {
-                    aces++;
-                    score += 1;
+                    scoreHalf += 2; // A = 1 點 = 2 個半點
                 } else if (['J', 'Q', 'K'].includes(card.rank)) {
-                    score += 10;
+                    scoreHalf += 1; // J/Q/K = 0.5 點 = 1 個半點
                 } else {
-                    score += parseInt(card.rank);
+                    scoreHalf += parseInt(card.rank) * 2; // 數字牌 = 面值 * 2
                 }
             }
 
-            // 如果有 A 且將其中一張 A 當作 11 不會爆牌，則加 10
-            while (aces > 0 && score + 10 <= 21) {
-                score += 10;
-                aces--;
-            }
-
-            return score;
+            return scoreHalf;
         }
-
-        // 檢查是否為 Blackjack（起手兩張牌合計 21）
-        function isBlackjack(hand) {
-            return hand.length === 2 && calculateScore(hand) === 21;
+        
+        // 將半點單位轉換為顯示點數
+        function displayScore(scoreHalf) {
+            return scoreHalf / 2;
         }
 
         // 顯示卡牌
@@ -375,24 +367,24 @@
             });
 
             // 顯示點數
-            const playerScore = calculateScore(playerHand);
-            playerScoreDiv.textContent = `點數：${playerScore}`;
+            const playerScoreHalf = calculateScore(playerHand);
+            playerScoreDiv.textContent = `點數：${displayScore(playerScoreHalf)}`;
 
             if (revealDealer) {
-                const dealerScore = calculateScore(dealerHand);
-                dealerScoreDiv.textContent = `點數：${dealerScore}`;
+                const dealerScoreHalf = calculateScore(dealerHand);
+                dealerScoreDiv.textContent = `點數：${displayScore(dealerScoreHalf)}`;
             } else if (dealerHand.length > 0) {
                 // 只顯示第一張明牌的點數
                 const firstCard = dealerHand[0];
-                let visibleScore = 0;
+                let visibleScoreHalf = 0;
                 if (firstCard.rank === 'A') {
-                    visibleScore = 11;
+                    visibleScoreHalf = 2; // 1 點
                 } else if (['J', 'Q', 'K'].includes(firstCard.rank)) {
-                    visibleScore = 10;
+                    visibleScoreHalf = 1; // 0.5 點
                 } else {
-                    visibleScore = parseInt(firstCard.rank);
+                    visibleScoreHalf = parseInt(firstCard.rank) * 2;
                 }
-                dealerScoreDiv.textContent = `顯示點數：${visibleScore}`;
+                dealerScoreDiv.textContent = `顯示點數：${displayScore(visibleScoreHalf)}`;
             } else {
                 dealerScoreDiv.textContent = '';
             }
@@ -475,10 +467,6 @@
             if (result === 'win') {
                 balance += currentBet;
                 addLog(`💰 贏得 ${currentBet}！餘額：${balance}`);
-            } else if (result === 'blackjack') {
-                const winnings = Math.floor(currentBet * 1.5);
-                balance += winnings;
-                addLog(`🎰 Blackjack！贏得 ${winnings}！餘額：${balance}`);
             } else if (result === 'lose') {
                 // 已經扣除，不需要再操作
                 addLog(`💸 損失 ${currentBet}。餘額：${balance}`);
@@ -522,44 +510,19 @@
             clearLog();
             addLog('🎮 新遊戲開始！');
 
-            // 發初始牌：玩家 2 張，莊家 2 張
-            playerHand.push(deck.pop());
-            dealerHand.push(deck.pop());
+            // 發初始牌：玩家 1 張，莊家 1 張（十點半規則）
             playerHand.push(deck.pop());
             dealerHand.push(deck.pop());
 
-            addLog(`玩家發到：${playerHand[0].rank}${playerHand[0].suit}、${playerHand[1].rank}${playerHand[1].suit}`);
-            addLog(`莊家發到：${dealerHand[0].rank}${dealerHand[0].suit}、[隱藏牌]`);
+            const playerScoreHalf = calculateScore(playerHand);
+            const dealerScoreHalf = calculateScore(dealerHand);
+            
+            addLog(`玩家發到：${playerHand[0].rank}${playerHand[0].suit}（${displayScore(playerScoreHalf)} 點）`);
+            addLog(`莊家發到：${dealerHand[0].rank}${dealerHand[0].suit}（${displayScore(dealerScoreHalf)} 點）`);
 
             updateUI(false);
             updateResult('進行中...');
-            
-            // 檢查起手 Blackjack
-            const playerBJ = isBlackjack(playerHand);
-            const dealerBJ = isBlackjack(dealerHand);
-
-            if (playerBJ || dealerBJ) {
-                gameState = 'settled';
-                updateUI(true);
-                
-                if (playerBJ && dealerBJ) {
-                    addLog('🤝 雙方都是 Blackjack！');
-                    updateResult('Push（平手）');
-                    settleBet('push');
-                } else if (playerBJ) {
-                    addLog('🎉 玩家 Blackjack！');
-                    updateResult('玩家勝利！🎉');
-                    settleBet('blackjack');
-                } else {
-                    addLog('💼 莊家 Blackjack！');
-                    updateResult('莊家勝利');
-                    settleBet('lose');
-                }
-                
-                updateButtons(false, false);
-            } else {
-                updateButtons(true, true);
-            }
+            updateButtons(true, true);
         }
 
         // 玩家要牌
@@ -576,21 +539,21 @@
 
             const card = deck.pop();
             playerHand.push(card);
-            addLog(`玩家要牌：${card.rank}${card.suit}`);
+            const scoreHalf = calculateScore(playerHand);
+            addLog(`玩家要牌：${card.rank}${card.suit}（目前 ${displayScore(scoreHalf)} 點）`);
 
             updateUI(false);
 
-            const score = calculateScore(playerHand);
-            if (score > 21) {
+            if (scoreHalf > 21) { // 10.5 點 = 21 個半點
                 // 玩家爆牌
                 gameState = 'settled';
-                addLog(`💥 玩家爆牌！（點數：${score}）`);
+                addLog(`💥 玩家爆牌！（點數：${displayScore(scoreHalf)}）`);
                 updateResult('玩家爆牌，莊家勝利');
                 updateUI(true);
                 updateButtons(false, false);
                 settleBet('lose');
-            } else if (score === 21) {
-                addLog(`✨ 玩家達到 21 點！`);
+            } else if (scoreHalf === 21) {
+                addLog(`✨ 玩家達到 10.5 點！`);
             }
         }
 
@@ -602,9 +565,8 @@
             addLog('玩家選擇停牌');
             updateButtons(false, false);
 
-            // 翻開莊家暗牌
+            // 顯示所有牌（十點半沒有暗牌，但為了UI一致性保留）
             updateUI(true);
-            addLog(`莊家翻開暗牌：${dealerHand[1].rank}${dealerHand[1].suit}`);
 
             // 莊家自動補牌
             setTimeout(() => {
@@ -614,10 +576,10 @@
 
         // 莊家補牌邏輯
         function dealerPlay() {
-            let dealerScore = calculateScore(dealerHand);
+            let dealerScoreHalf = calculateScore(dealerHand);
 
-            // 莊家規則：<= 16 必須要牌，>= 17 停牌
-            while (dealerScore <= 16) {
+            // 莊家規則：< 8 點必須要牌，>= 8 點停牌（8 點 = 16 個半點）
+            while (dealerScoreHalf < 16) {
                 // 檢查牌堆是否為空
                 if (deck.length === 0) {
                     addLog('⚠️ 牌堆已空，以當前點數結算');
@@ -626,9 +588,9 @@
                 
                 const card = deck.pop();
                 dealerHand.push(card);
-                addLog(`莊家要牌：${card.rank}${card.suit}`);
+                dealerScoreHalf = calculateScore(dealerHand);
+                addLog(`莊家要牌：${card.rank}${card.suit}（目前 ${displayScore(dealerScoreHalf)} 點）`);
                 updateUI(true);
-                dealerScore = calculateScore(dealerHand);
             }
 
             // 結算
@@ -638,26 +600,26 @@
 
         // 結算遊戲
         function settleGame() {
-            const playerScore = calculateScore(playerHand);
-            const dealerScore = calculateScore(dealerHand);
+            const playerScoreHalf = calculateScore(playerHand);
+            const dealerScoreHalf = calculateScore(dealerHand);
 
-            addLog(`最終點數 - 玩家：${playerScore}，莊家：${dealerScore}`);
+            addLog(`最終點數 - 玩家：${displayScore(playerScoreHalf)}，莊家：${displayScore(dealerScoreHalf)}`);
 
-            if (dealerScore > 21) {
+            if (dealerScoreHalf > 21) { // 10.5 點 = 21 個半點
                 addLog('💥 莊家爆牌！');
                 updateResult('莊家爆牌，玩家勝利！🎉');
                 settleBet('win');
-            } else if (playerScore > dealerScore) {
+            } else if (playerScoreHalf > dealerScoreHalf) {
                 addLog('🎉 玩家點數較大！');
                 updateResult('玩家勝利！🎉');
                 settleBet('win');
-            } else if (playerScore < dealerScore) {
+            } else if (playerScoreHalf < dealerScoreHalf) {
                 addLog('💼 莊家點數較大');
                 updateResult('莊家勝利');
                 settleBet('lose');
             } else {
                 addLog('🤝 點數相同');
-                updateResult('Push（平手）');
+                updateResult('和局（Push）');
                 settleBet('push');
             }
         }
