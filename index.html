@@ -394,6 +394,14 @@
         // 玩家要牌
         function hit() {
             if (gameState !== 'playerTurn') return;
+            
+            // 檢查牌堆是否為空
+            if (deck.length === 0) {
+                addLog('⚠️ 牌堆已空，遊戲結束');
+                gameState = 'settled';
+                updateButtons(false, false);
+                return;
+            }
 
             const card = deck.pop();
             playerHand.push(card);
@@ -438,6 +446,12 @@
 
             // 莊家規則：<= 16 必須要牌，>= 17 停牌
             while (dealerScore <= 16) {
+                // 檢查牌堆是否為空
+                if (deck.length === 0) {
+                    addLog('⚠️ 牌堆已空，以當前點數結算');
+                    break;
+                }
+                
                 const card = deck.pop();
                 dealerHand.push(card);
                 addLog(`莊家要牌：${card.rank}${card.suit}`);
